@@ -1,44 +1,35 @@
 import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import axios from "axios";
-import Plot from "react-plotly.js";
+import InputForm from "./components/InputForm";
+import ButtonGrid from "./components/ButtonGrid";
+import PredefinedFormulas from "./components/PredefinedFormulas";
+import SignalPlot from "./components/SignalPlot";
+import EnergyClassification from "./components/EnergyClassification";
 
 function App() {
   const [formula, setFormula] = useState("");
-  const [data, setData] = useState({ t: [], y: [] });
+  const [data, setData] = useState({ t: [], y: [], energy: null });
   const [error, setError] = useState("");
 
   const handlePlot = async () => {
     try {
-      const response = await axios.post("http://localhost:5000/evaluate", {
+      const response = await axios.post("http://127.0.0.1:5000/evaluate", {
         formula,
       });
       setData(response.data);
-      setError("");
+      setError(""); // Clear errors
     } catch (err) {
-      console.error("Error:", err.response?.data?.error || err.message);
+      console.error(
+        "Backend Error Response:",
+        err.response?.data || err.message
+      );
       setError(err.response?.data?.error || "An error occurred");
     }
   };
 
   const addToFormula = (text) => {
-    if (
-      [
-        "sin",
-        "cos",
-        "tan",
-        "exp",
-        "log",
-        "sqrt",
-        "rect",
-        "tri",
-        "sinc",
-        "u",
-      ].includes(text)
-    ) {
-      setFormula((prev) => prev + `${text}(`); // Add opening parenthesis for functions
-    } else {
-      setFormula((prev) => prev + text); // Append the text
-    }
+    setFormula((prev) => prev + text);
   };
 
   const handleInputChange = (e) => {
@@ -46,78 +37,60 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
-      <h1 className="text-3xl font-bold mb-6">Signal Visualizer</h1>
-      <div className="w-full max-w-md bg-white p-6 rounded-lg shadow-md">
-        <input
-          type="text"
-          value={formula}
-          onChange={handleInputChange}
-          placeholder="Enter a function of t (e.g., 2*sin(t), rect(t-1))"
-          className="w-full p-2 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-green-500"
-          autoFocus
-        />
-        <button
-          onClick={handlePlot}
-          className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors"
-        >
-          Plot Signal
-        </button>
-        {error && <p className="text-red-500 mt-4">{error}</p>}
-        {/* Button Grid */}
-        <div className="grid grid-cols-4 gap-2 mt-4 bg-gray-200 p-2">
-          {[
-            "sin",
-            "cos",
-            "tan",
-            "exp",
-            "log",
-            "sqrt",
-            "rect",
-            "tri",
-            "sinc",
-            "u",
-            "(",
-            ")",
-            "+",
-            "-",
-            "*",
-            "/",
-            "^",
-            "t",
-          ].map((btn) => (
-            <button
-              key={btn}
-              onClick={() => addToFormula(btn)}
-              className="p-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-            >
-              {btn}
-            </button>
-          ))}
-        </div>
+    <Router>
+      <div className="min-h-screen flex flex-col bg-gray-100">
+        <nav className="bg-blue-600 text-white p-4 shadow-md flex justify-between">
+          <h1 className="text-2xl font-bold">Signal Visualizer</h1>
+          <div>
+            <Link to="/" className="mr-4">
+              Home
+            </Link>
+            <Link to="/energy-classification">Energy Classification</Link>
+          </div>
+        </nav>
+
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <div className="flex flex-1">
+                <aside className="w-1/4 bg-white shadow-md p-4 border-r">
+                  <h2 className="text-lg font-semibold mb-4">Functions</h2>
+                  <ButtonGrid addToFormula={addToFormula} />
+                  <PredefinedFormulas setFormula={setFormula} />
+                </aside>
+                <main className="flex-1 p-6">
+                  <section className="bg-white shadow-md p-6 rounded-lg">
+                    <h2 className="text-xl font-semibold mb-4">
+                      Enter Formula
+                    </h2>
+                    <InputForm
+                      formula={formula}
+                      handleInputChange={handleInputChange}
+                      handlePlot={handlePlot}
+                    />
+                    {error && <p className="text-red-500 mt-2">{error}</p>}
+                  </section>
+                  <section className="mt-6 bg-white shadow-md p-6 rounded-lg">
+                    <h2 className="text-xl font-semibold mb-4">Graph</h2>
+                    <SignalPlot data={data} />
+                    {data.energy !== null && (
+                      <p className="text-blue-600 font-semibold mt-4">
+                        Signal Energy: {data.energy.toFixed(4)}
+                      </p>
+                    )}
+                  </section>
+                </main>
+              </div>
+            }
+          />
+          <Route
+            path="/energy-classification"
+            element={<EnergyClassification />}
+          />
+        </Routes>
       </div>
-      <div className="mt-8 w-full max-w-4xl">
-        <Plot
-          data={[
-            {
-              x: data.t,
-              y: data.y,
-              type: "scatter",
-              mode: "lines",
-              line: { color: "#4CAF50" },
-            },
-          ]}
-          layout={{
-            title: "Signal Visualization",
-            xaxis: { title: "Time t" },
-            yaxis: { title: "Amplitude" },
-            showlegend: false,
-          }}
-          config={{ responsive: true }}
-          className="w-full"
-        />
-      </div>
-    </div>
+    </Router>
   );
 }
 
