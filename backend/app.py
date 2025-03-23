@@ -28,7 +28,7 @@ def calculate_energy(y, t):
 def evaluate():
     data = request.json
     formula = data.get('formula')
-    t = np.linspace(-2, 2, 1000)
+    t = np.linspace(-4, 4, 1000)
 
     try:
         # Remplacement des fonctions
